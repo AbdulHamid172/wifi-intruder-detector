@@ -19,10 +19,15 @@ This tool is **defensive only** — no deauth, no cracking, no offensive feature
 ## Features
 
 - Auto-detects your local subnet
-- Scans every device: **IP · MAC · vendor**
+- Scans every device: **IP · MAC · hostname · vendor**
 - **Unknown devices highlighted in red**
 - **Trust** recognized devices — they turn green and stop being flagged
 - Trusted list saved locally (`known_devices.json`)
+- **Hostname resolution** per device (when the device advertises one)
+- **Sortable table** — click any column header
+- **First-seen / last-seen** timestamps per device
+- **Desktop notification** when unknown devices appear
+- **Export scan results to CSV**
 - Dark UI with sidebar (Dashboard · Devices · Settings · About)
 
 ---
@@ -37,26 +42,17 @@ This tool is **defensive only** — no deauth, no cracking, no offensive feature
 
 ## Install (Linux)
 
-```bash
-# 1. Install nmap and Python tools
-sudo apt update
-sudo apt install nmap python3 python3-venv python3-pip git -y
+    sudo apt update
+    sudo apt install nmap python3 python3-venv python3-pip git libnotify-bin -y
 
-# 2. Clone the repo
-cd ~
-git clone https://github.com/AbdulHamid172/wifi-intruder-detector.git
-cd wifi-intruder-detector
+    cd ~
+    git clone https://github.com/AbdulHamid172/wifi-intruder-detector.git
+    cd wifi-intruder-detector
 
-# 3. Set up isolated Python environment
-python3 -m venv venv
-source venv/bin/activate
+    python3 -m venv venv
+    source venv/bin/activate
 
-# 4. Install dependencies
-pip install -r requirements.txt
-
-# 5. Run
-sudo python3 main.py
-```
+    pip install -r requirements.txt
 
 **On macOS:** `brew install nmap` before step 2.
 
@@ -71,15 +67,14 @@ sudo python3 main.py
    - 🟢 Green = trusted (safe)
    - 🔴 Red = unknown (investigate)
 3. **Trust a device** you recognize → select the row → click **✅ Trust**. It turns green.
-4. **Repeat weekly** — any new red row = check the vendor/MAC. All green = network clean.
+4. **Export** any scan → **📤 Export CSV** for a timestamped record.
+5. **Repeat weekly** — any new red row = check the vendor/MAC. All green = network clean.
 
 **Every run after first install:**
 
-```bash
-cd ~/wifi-intruder-detector
-source venv/bin/activate
-sudo python3 main.py
-```
+    cd ~/wifi-intruder-detector
+    source venv/bin/activate
+    sudo venv/bin/python main.py
 
 `sudo` is needed because nmap requires raw network access — without it, 0 devices are found.
 
@@ -91,24 +86,24 @@ sudo python3 main.py
 |---|---|
 | `nmap: command not found` | `sudo apt install nmap -y` |
 | `ModuleNotFoundError: PySide6` | `source venv/bin/activate && pip install -r requirements.txt` |
-| Scan finds 0 devices | Forgot `sudo` — run `sudo python3 main.py` |
+| Scan finds 0 devices | Forgot `sudo` — run `sudo venv/bin/python main.py` |
 | Wrong subnet detected | Fix in Settings tab, or `ip -4 route show default` to find yours |
 | `qt.qpa.plugin: xcb` error | `sudo apt install libxcb-cursor0 libxcb-xinerama0 -y` |
+| No desktop notification | `sudo apt install libnotify-bin -y` |
+| All devices show "Unknown vendor" | Normal — modern phones randomize their MAC for privacy. Trust your own devices to stop them being flagged. |
 
 ---
 
 ## Tech stack
 
-Python 3.9+ · [PySide6](https://doc.qt.io/qtforpython-6/) · [python-nmap](https://pypi.org/project/python-nmap/) · [nmap](https://nmap.org/)
+Python 3.9+ · PySide6 · python-nmap · nmap
 
 ---
 
 ## Uninstall
 
-```bash
-cd ~
-rm -rf wifi-intruder-detector
-```
+    cd ~
+    rm -rf wifi-intruder-detector
 
 ---
 
