@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 )
 from scanner import scan_network, detect_subnet
 from storage import load_known
+from notifier import notify
 
 
 class ScanWorker(QThread):
@@ -58,6 +59,7 @@ class DashboardPage(QWidget):
         header.setStyleSheet("font-size: 26px; font-weight: 800; color: #cdd6f4;")
         layout.addWidget(header)
 
+        # --- Stat cards ---
         cards = QHBoxLayout()
         self.total_card   = StatCard("Total devices", "0", "#89b4fa")
         self.trusted_card = StatCard("Trusted",       "0", "#a6e3a1")
@@ -67,6 +69,7 @@ class DashboardPage(QWidget):
         cards.addWidget(self.unknown_card)
         layout.addLayout(cards)
 
+        # --- Scan controls ---
         scan_row = QHBoxLayout()
         scan_row.addWidget(QLabel("Subnet:"))
         self.subnet_input = QLineEdit(detect_subnet() or "192.168.1.0/24")
@@ -78,7 +81,7 @@ class DashboardPage(QWidget):
         layout.addLayout(scan_row)
 
         self.progress = QProgressBar()
-        self.progress.setRange(0, 0)
+        self.progress.setRange(0, 0)   # indeterminate spinner
         self.progress.hide()
         layout.addWidget(self.progress)
 
@@ -86,14 +89,18 @@ class DashboardPage(QWidget):
         layout.addWidget(self.status)
         layout.addStretch(1)
 
+    # ---------- scanning ----------
     def start_scan(self):
         subnet = self.subnet_input.text().strip()
         if not subnet:
-            QMessageBox.warning(self, "No subnet", "Enter a subnet like 192.168.1.0/24")
+            QMessageBox.warning(self, "No subnet",
+                                "Enter a subnet like 192.168.1.0/24")
             return
         self.scan_btn.setEnabled(False)
         self.scan_btn.setText("Scanning…")
         self.progress.show()
+        self.status.setText("Starting scan…")
+
         self.worker = ScanWorker(subnet)
         self.worker.progress.connect(self.status.setText)
         self.worker.finished.connect(self.on_done)
@@ -106,12 +113,26 @@ class DashboardPage(QWidget):
 
     def on_done(self, devices):
         self._reset()
+
         known = load_known()
-        unknown = sum(1 for m in devices if m not in known)
+        # A device is "trusted" only if it has a non-empty name.
+        unknown = sum(
+            1 for m in devices
+            if not (known.get(m) or {}).get("name")
+        )
+
         self.total_card.set_value(len(devices))
         self.trusted_card.set_value(len(devices) - unknown)
         self.unknown_card.set_value(unknown)
         self.status.setText(f"Scan complete — {len(devices)} device(s).")
+
+        # Notify the user if strangers are on the network
+        if unknown > 0:
+            notify(
+                "⚠️ WiFi Alert",
+                f"{unknown} unknown device(s) on your network!",
+            )
+
         self.scan_finished.emit(devices)
 
     def _reset(self):

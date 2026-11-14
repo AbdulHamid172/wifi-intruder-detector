@@ -34,12 +34,26 @@ def detect_subnet():
     return "192.168.1.0/24"
 
 
+def _extract_hostname(host_data):
+    """Pull the best hostname string out of an nmap host dict."""
+    hostnames = host_data.get("hostnames", [])
+    for entry in hostnames:
+        name = (entry.get("name") or "").strip()
+        if name:
+            return name
+    return ""
+
+
 def scan_network(subnet, progress_cb=None):
-    """Return dict {mac_lower: {ip, vendor}}."""
+    """Return dict {mac_lower: {ip, vendor, hostname}}."""
     nm = nmap.PortScanner()
     if progress_cb:
         progress_cb(f"Scanning {subnet} ... (may take ~10s)")
-    nm.scan(hosts=subnet, arguments="-sn")
+
+    # -sn  = ping/ARP sweep (no port scan)
+    # -R   = always try reverse-DNS (gives us hostnames more often)
+    nm.scan(hosts=subnet, arguments="-sn -R")
+
     devices = {}
     for host in nm.all_hosts():
         addrs = nm[host].get("addresses", {})
@@ -48,11 +62,20 @@ def scan_network(subnet, progress_cb=None):
         if not mac:
             continue
         mac = mac.lower()
+
+        hostname = _extract_hostname(nm[host])
+
         try:
             vendor = get_vendor(mac) or "Unknown vendor"
         except Exception:
             vendor = "Unknown vendor"
-        devices[mac] = {"ip": ip, "vendor": vendor}
+
+        devices[mac] = {
+            "ip": ip,
+            "vendor": vendor,
+            "hostname": hostname,
+        }
+
     if progress_cb:
         progress_cb(f"Scan complete — {len(devices)} device(s) found.")
     return devices
