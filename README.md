@@ -1,4 +1,5 @@
 # 🛡️ WiFi Intruder Detector
+<!-- refreshed -->
 
 A cross-platform desktop app that scans your WiFi network, lists every connected device, and highlights unknown ones so you can spot intruders.
 
